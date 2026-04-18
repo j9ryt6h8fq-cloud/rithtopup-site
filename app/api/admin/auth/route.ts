@@ -15,21 +15,27 @@ const loginSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  const body = await req.json().catch(() => ({}));
-  const parsed = loginSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid credentials" }, { status: 400 });
+  try {
+    const body = await req.json().catch(() => ({}));
+    const parsed = loginSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid credentials" }, { status: 400 });
+    }
+
+    const admin = await verifyAdminCredentials(parsed.data.email, parsed.data.password);
+    if (!admin) {
+      return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
+    }
+
+    const token = await createSession(admin);
+    await setSessionCookie(token);
+
+    return NextResponse.json({ ok: true, email: admin.email });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Server error";
+    console.error("[admin/auth] login failed:", message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
-
-  const admin = await verifyAdminCredentials(parsed.data.email, parsed.data.password);
-  if (!admin) {
-    return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
-  }
-
-  const token = await createSession(admin);
-  await setSessionCookie(token);
-
-  return NextResponse.json({ ok: true, email: admin.email });
 }
 
 export async function DELETE() {
