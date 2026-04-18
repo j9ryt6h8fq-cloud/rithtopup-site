@@ -28,6 +28,15 @@ const KHPAY_BASE = (process.env.KHPAY_BASE_URL || "https://khpay.site/api/v1").t
 const KHPAY_KEY = (process.env.KHPAY_API_KEY || "").trim();
 const SIM_MODE = process.env.PAYMENT_SIMULATION_MODE === "true";
 
+/** Common headers so Cloudflare doesn't serve a JS challenge to Vercel IPs. */
+const KHPAY_HEADERS: Record<string, string> = {
+  "Authorization": `Bearer ${KHPAY_KEY}`,
+  "Content-Type": "application/json",
+  "Accept": "application/json",
+  "User-Agent": "RITHTOPUP/1.0 (Server; Node)",
+  "Accept-Language": "en-US,en;q=0.9",
+};
+
 export async function initiatePayment(
   args: InitiatePaymentArgs
 ): Promise<PaymentInitResult> {
@@ -98,10 +107,7 @@ async function initiateKhpay(args: InitiatePaymentArgs): Promise<PaymentInitResu
   try {
     res = await fetch(`${KHPAY_BASE}/qr/generate`, {
       method: "POST",
-      headers: {
-        "Authorization": `Bearer ${KHPAY_KEY}`,
-        "Content-Type": "application/json",
-      },
+      headers: KHPAY_HEADERS,
       body: JSON.stringify(body),
       cache: "no-store",
       signal: controller.signal,
@@ -148,7 +154,7 @@ export async function fetchKhpayStatus(transactionId: string): Promise<{
   let res: Response;
   try {
     res = await fetch(`${KHPAY_BASE}/qr/check/${transactionId}`, {
-      headers: { "Authorization": `Bearer ${KHPAY_KEY}` },
+      headers: KHPAY_HEADERS,
       cache: "no-store",
       signal: ac.signal,
     });
